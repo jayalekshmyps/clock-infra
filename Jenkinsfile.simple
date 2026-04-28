@@ -1,0 +1,78 @@
+/*
+  Jenkinsfile.simple
+  ------------------
+  Purpose:
+  - Initial MVP Jenkins pipeline
+  - Used to demonstrate end-to-end CI/CD flow with minimal complexity
+
+  This version:
+  - Single repo pipeline
+  - Inline Docker build & push
+  - Direct kubectl deploy
+  - No gated approvals
+  - No environment promotion flow
+
+  This is NOT wrong.
+  This is intentionally kept as a baseline before enterprise hardening.
+*/
+
+pipeline {
+  agent any
+
+  parameters {
+    choice(name: 'ENV', choices: ['dev','qa','uat','prod'], description: 'Target environment')
+  }
+
+  environment {
+    REGISTRY = "myacr.azurecr.io"
+    TAG = "${BUILD_NUMBER}"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        git 'https://github.com/<you>/clock-infra.git'
+      }
+    }
+
+    stage('Sonar Scan') {
+      steps {
+        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'TOKEN')]) {
+          sh '''
+            sonar-scanner \
+              -Dsonar.projectKey=clock-app \
+              -Dsonar.host.url=http://sonarqube:9000 \
+              -Dsonar.login=$TOKEN
+          '''
+        }
+      }
+    }
+
+    stage('Build Images') {
+      steps {
+        sh '''
+          docker build -t $REGISTRY/clock-frontend:$TAG ../clock-frontend
+          docker build -t $REGISTRY/clock-backend:$TAG ../clock-backend
+        '''
+      }
+    }
+
+    stage('Push Images') {
+      steps {
+        sh '''
+          docker push $REGISTRY/clock-frontend:$TAG
+          docker push $REGISTRY/clock-backend:$TAG
+        '''
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        sh """
+          kubectl apply -k k8s/overlays/${ENV}
+        """
+      }
+    }
+  }
+}
