@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clock-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clock-frontend
+  template:
+    metadata:
+      labels:
+        app: clock-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: acrclock105915912.azurecr.io/clock-frontend:dev
+          ports:
+            - containerPort: 80
+          env:
+            - name: REACT_APP_ENV
+              value: "dev"
+            - name: BACKEND_BASE_URL
+              value: "http://clock-backend:5000"

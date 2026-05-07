@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clock-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clock-backend
+  template:
+    metadata:
+      labels:
+        app: clock-backend
+    spec:
+      containers:
+        - name: backend
+          image: acrclock105915912.azurecr.io/clock-backend:dev
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /api/time
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
